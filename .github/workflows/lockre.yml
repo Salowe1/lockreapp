@@ -15,30 +15,11 @@ jobs:
         with:
           channel: 'stable'
           architecture: x64
-          
-      - name: Add `build_runner` Package
-        run: dart pub add dev:build_runner    
+           
 
       - name: Install Dependencies
         run: flutter pub get
-
-      - name: Ensure CocoaPods is up-to-date
-        run: pod repo update
-        working-directory: ios
-
-      - name: Install CocoaPods dependencies
-        run: |
-          pod install --repo-update
-        working-directory: ios
-
-      - name: Clean Flutter Project
-        run: flutter clean
-
-      - name: Regenerate `GeneratedPluginRegistrant.m` and Dependencies
-        run: |
-          flutter pub get
-          flutter pub run build_runner build --delete-conflicting-outputs
-
+     
       - name: Build iOS IPA
         run: flutter build ios --release --no-codesign
 
