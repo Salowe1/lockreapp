@@ -1,0 +1,70 @@
+name: Build and Release iOS IPA
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-ios:
+    name: Build iOS IPA
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          architecture: x64
+
+      - name: Clean and Install Dependencies
+        run: |
+          flutter clean
+          dart pub add dev:build_runner
+          flutter pub get
+
+      - name: Ensure CocoaPods is Up-to-Date
+        run: |
+          sudo gem install cocoapods
+          pod repo update
+        working-directory: ios
+
+      - name: Install CocoaPods Dependencies
+        run: |
+          rm -rf Pods Podfile.lock
+          pod install --repo-update
+        working-directory: ios
+
+      - name: Regenerate Plugin Registrant and Dependencies
+        run: |
+          flutter pub get
+          flutter pub run build_runner build --delete-conflicting-outputs
+
+      - name: Check Flutter XCFramework
+        run: |
+          if [ ! -d "$FLUTTER_ROOT/bin/cache/artifacts/engine/ios/Flutter.xcframework" ]; then
+            echo "Flutter.xcframework not found. Run 'flutter doctor' for diagnostics."
+            exit 1
+          fi
+
+      - name: Build iOS IPA
+        run: flutter build ios --release --no-codesign
+
+      - name: Package IPA
+        run: |
+          mkdir Payload
+          mv build/ios/iphoneos/Runner.app Payload/
+          zip -qq -r -9 FlutterIpaExport.ipa Payload
+        working-directory: build/ios/iphoneos
+
+      - name: Upload IPA to GitHub Release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.PAT_TOKEN }}
+          file: build/ios/iphoneos/FlutterIpaExport.ipa
+          tag: v1.0
+          overwrite: true
+          body: "Release notes here."
+
+      - name: Post Build Cleanup
+        run: rm -rf Payload
+        working-directory: build/ios/iphoneos
