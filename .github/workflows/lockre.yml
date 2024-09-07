@@ -16,9 +16,12 @@ jobs:
           channel: 'stable'
           architecture: x64
            
-
-      - name: Install Dependencies
-        run: flutter pub get
+      - name: Upgrade Flutter and Dependencies
+        run: |
+          flutter upgrade
+          flutter pub get
+          cd ios
+          pod install
      
       - name: Build iOS IPA
         run: flutter build ios --release --no-codesign
